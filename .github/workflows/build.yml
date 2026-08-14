@@ -1,4 +1,4 @@
-name: Build LVGL firmware
+name: Build LVGL
 
 on:
   push:
@@ -6,52 +6,50 @@ on:
       - main
   workflow_dispatch:
 
+
 jobs:
+
   build:
+
     runs-on: ubuntu-latest
+
 
     steps:
 
-      - name: Checkout
-        uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
 
 
-      - name: Install PlatformIO and esptool
-        run: |
-          python -m pip install --upgrade pip
-          pip install platformio esptool
+    - name: Install
+      run: |
+        pip install platformio esptool
 
 
-      - name: Build firmware
-        run: |
-          pio run
+    - name: Build
+      run: |
+        pio run
 
 
-      - name: Check build files
-        run: |
-          ls -la .pio/build/esp32-s3/
+    - name: Merge BIN
+      run: |
+        esptool --chip esp32s3 merge-bin \
+        -o LVGL.bin \
+        --flash-mode dio \
+        --flash-freq 80m \
+        --flash-size 16MB \
+        0x0000 .pio/build/esp32-s3/bootloader.bin \
+        0x8000 .pio/build/esp32-s3/partitions.bin \
+        0x10000 .pio/build/esp32-s3/firmware.bin
 
 
-      - name: Merge ESP32-S3 firmware
-        run: |
-          esptool --chip esp32s3 merge-bin \
-            -o LVGL.bin \
-            --flash-mode dio \
-            --flash-freq 80m \
-            --flash-size 16MB \
-            0x0000 .pio/build/esp32-s3/bootloader.bin \
-            0x8000 .pio/build/esp32-s3/partitions.bin \
-            0x10000 .pio/build/esp32-s3/firmware.bin
-
-
-      - name: Upload firmware
-        uses: actions/upload-artifact@v4
-        with:
-          name: LVGL-single-firmware
-          path: LVGL.bin
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: LVGL-firmware
+        path: LVGL.bin
