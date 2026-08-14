@@ -11,45 +11,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
-
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
-          pip install platformio
-
+          pip install platformio esptool
 
       - name: Build firmware
         run: |
           pio run
 
-
-      - name: Prepare firmware files
+      - name: Merge firmware into one BIN
         run: |
-          mkdir release
+          esptool.py merge_bin \
+            -o LVGL.bin \
+            --flash_mode dio \
+            --flash_freq 80m \
+            --flash_size 16MB \
+            0x0000 .pio/build/esp32-s3/bootloader.bin \
+            0x8000 .pio/build/esp32-s3/partitions.bin \
+            0x10000 .pio/build/esp32-s3/firmware.bin
 
-          cp .pio/build/esp32-s3/firmware.bin release/
-          cp .pio/build/esp32-s3/bootloader.bin release/
-          cp .pio/build/esp32-s3/partitions.bin release/
-
-          cd release
-
-          echo "0x0 bootloader.bin" > flash_args.txt
-          echo "0x8000 partitions.bin" >> flash_args.txt
-          echo "0x10000 firmware.bin" >> flash_args.txt
-
-
-      - name: Upload firmware
+      - name: Upload single firmware
         uses: actions/upload-artifact@v4
         with:
-          name: LVGL-ESP32-S3-firmware
-          path: release/
+          name: LVGL-single-firmware
+          path: LVGL.bin
