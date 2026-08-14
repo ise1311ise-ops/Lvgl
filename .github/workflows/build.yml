@@ -1,0 +1,55 @@
+name: Build LVGL firmware
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+
+      - name: Build firmware
+        run: |
+          pio run
+
+
+      - name: Prepare firmware files
+        run: |
+          mkdir release
+
+          cp .pio/build/esp32-s3/firmware.bin release/
+          cp .pio/build/esp32-s3/bootloader.bin release/
+          cp .pio/build/esp32-s3/partitions.bin release/
+
+          cd release
+
+          echo "0x0 bootloader.bin" > flash_args.txt
+          echo "0x8000 partitions.bin" >> flash_args.txt
+          echo "0x10000 firmware.bin" >> flash_args.txt
+
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: LVGL-ESP32-S3-firmware
+          path: release/
